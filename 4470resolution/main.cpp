@@ -16,9 +16,17 @@ int main(int argc, const char * argv[]) {
     cout << "Please input a source file name: (input 'Q' to quit)\n";
     cin >> fileName;
     while (fileName != "q" && fileName != "Q") {
+        cout << endl;
         prover.clearData();
         if (prover.readCNFfile(dir + fileName)) {
-            prover.printAllClauses();
+            if (prover.resolutionProve()) {
+                prover.printAllClauses();
+                cout << "The query has been proved! \n\n";
+                // todo: print the resolvePath
+            } else {
+                prover.printAllClauses();
+                cout << "The query cannot be proved by the given KB \n";
+            }
         }
         cout << "\nPlease input a source file name: (input 'Q' to quit)\n";
         cin >> fileName;

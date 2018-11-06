@@ -123,10 +123,24 @@ public:
         }
     }
     
-    bool isAlreadyInKB(const std::vector<std::string>& newClause) {
+    bool isLiteralInClause(std::string literal, const std::vector<std::string>& clause) {
+        return std::find(clause.begin(), clause.end(), literal) != clause.end();
+    }
+
+    bool isEqual(const std::vector<std::string>& c1, const std::vector<std::string>& c2) {
+        if (c1.size() != c2.size()) return false;
+        for (int i = 0; i < c1.size(); i++) {
+            if (!isLiteralInClause(c1[i], c2)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    bool isClauseInKB(const std::vector<std::string>& newClause) {
         for (auto clause : clauses) {
-            if (newClause.size() == clause.size()) {
-                
+            if (isEqual(newClause, clause)) {
+                return true;
             }
         }
         return false;
@@ -138,16 +152,22 @@ public:
                 if (c1[i] == negation(c2[j])) {
                     std::vector<std::string> newClause;
                     for (int k = 0; k < c1.size(); k++) {
-                        if (k != i) {
-                            newClause.push_back(c1[i]);
+                        if (k != i && !isLiteralInClause(c1[k], newClause)) {
+                            newClause.push_back(c1[k]);
                         }
                     }
                     for (int k = 0; k < c2.size(); k++) {
-                        if (k != j) {
-                            newClause.push_back(c2[j]);
+                        if (k != j && !isLiteralInClause(c2[k], newClause)) {
+                            newClause.push_back(c2[k]);
                         }
                     }
-                    if (isAlreadyInKB(newClause)) {
+                    if (newClause.empty()) {
+                        isProved = true;
+                        clauses.push_back(newClause);
+                        resolvePath[static_cast<int>(clauses.size()) - 1] = std::make_pair(i, j);
+                        return;
+                    }
+                    if (isClauseInKB(newClause)) {
                         return;
                     } else {
                         clauses.push_back(newClause);
@@ -170,6 +190,7 @@ public:
                     if (isProved) return true;
                 }
             }
+            endIndex = clauses.size();
         }
         return false;
     }
