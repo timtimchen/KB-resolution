@@ -20,7 +20,7 @@ class CNFprover {
 private:
     const std::string WHITESPACE = " \t\n\r\v\f";
     std::vector<std::vector<std::string>> clauses;
-    std::map<int, std::pair<int, int>> resolvePath;
+    std::map<size_t, std::pair<size_t, size_t>> resolvePath;
     bool isProved = false;
     
 public:
@@ -146,32 +146,32 @@ public:
         return false;
     }
     
-    void resolve(const std::vector<std::string>& c1, const std::vector<std::string>& c2) {
-        for (int i = 0; i < c1.size(); i++) {
-            for (int j = 0; j < c2.size(); j++) {
-                if (c1[i] == negation(c2[j])) {
+    void resolve(size_t c1, size_t c2) {
+        for (int i = 0; i < clauses[c1].size(); i++) {
+            for (int j = 0; j < clauses[c2].size(); j++) {
+                if (clauses[c1][i] == negation(clauses[c2][j])) {
                     std::vector<std::string> newClause;
-                    for (int k = 0; k < c1.size(); k++) {
-                        if (k != i && !isLiteralInClause(c1[k], newClause)) {
-                            newClause.push_back(c1[k]);
+                    for (int k = 0; k < clauses[c1].size(); k++) {
+                        if (k != i && !isLiteralInClause(clauses[c1][k], newClause)) {
+                            newClause.push_back(clauses[c1][k]);
                         }
                     }
-                    for (int k = 0; k < c2.size(); k++) {
-                        if (k != j && !isLiteralInClause(c2[k], newClause)) {
-                            newClause.push_back(c2[k]);
+                    for (int k = 0; k < clauses[c2].size(); k++) {
+                        if (k != j && !isLiteralInClause(clauses[c2][k], newClause)) {
+                            newClause.push_back(clauses[c2][k]);
                         }
                     }
                     if (newClause.empty()) {
                         isProved = true;
                         clauses.push_back(newClause);
-                        resolvePath[static_cast<int>(clauses.size()) - 1] = std::make_pair(i, j);
+                        resolvePath[clauses.size() - 1] = std::make_pair(c1, c2);
                         return;
                     }
                     if (isClauseInKB(newClause)) {
                         return;
                     } else {
                         clauses.push_back(newClause);
-                        resolvePath[static_cast<int>(clauses.size()) - 1] = std::make_pair(i, j);
+                        resolvePath[clauses.size() - 1] = std::make_pair(c1, c2);
                     }
                 }
             }
@@ -186,13 +186,36 @@ public:
             startIndex = endIndex;
             for (size_t i = 0; i < endIndex; i++) {
                 for (size_t j = (i + 1 > tempIndex ? i + 1 : tempIndex); j < endIndex; j++) {
-                    resolve(clauses[i], clauses[j]);
+                    resolve(i, j);
                     if (isProved) return true;
                 }
             }
             endIndex = clauses.size();
         }
         return false;
+    }
+    
+    std::string printPath(size_t n) {
+        std::string result = "";
+        if (resolvePath.find(n) != resolvePath.end()) {
+            result = "[ " + printPath(resolvePath[n].first) + " , "
+            + std::to_string(n)
+            + " , " + printPath(resolvePath[n].second) + " ]";
+        } else {
+            result = std::to_string(n);
+        }
+        return result;
+    }
+    
+    void printResolvePath() {
+        std::cout << printPath(static_cast<int>(clauses.size()) - 1) << std::endl;
+//        for (size_t i = 0; i < clauses.size(); i++) {
+//            if (resolvePath.find(i) != resolvePath.end()) {
+//                std::cout << "[" << resolvePath[i].first << ","
+//                << resolvePath[i].second << "] => ["
+//                << i << "]\n";
+//            }
+//        }
     }
 };
 

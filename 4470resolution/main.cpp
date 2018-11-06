@@ -21,11 +21,11 @@ int main(int argc, const char * argv[]) {
         if (prover.readCNFfile(dir + fileName)) {
             if (prover.resolutionProve()) {
                 prover.printAllClauses();
-                cout << "The query has been proved! \n\n";
-                // todo: print the resolvePath
+                cout << "\nThe query has been proved! \n\n";
+                prover.printResolvePath();
             } else {
                 prover.printAllClauses();
-                cout << "The query cannot be proved by the given KB \n";
+                cout << "\nThe query cannot be proved by the given KB. \n";
             }
         }
         cout << "\nPlease input a source file name: (input 'Q' to quit)\n";
