@@ -21,7 +21,9 @@ private:
     const std::string WHITESPACE = " \t\n\r\v\f";
     std::vector<std::vector<std::string>> clauses;
     std::map<size_t, std::pair<size_t, size_t>> resolvePath;
+    std::map<std::string, std::string> unification;
     bool isProved = false;
+    int lineCounter = 0;
     
 public:
     void clearData() {
@@ -63,6 +65,39 @@ public:
         }
     }
     
+    std::string parseLiteral(std::string literal) {
+        std::string returnLiteral = "";
+        size_t firstPos = literal.find_first_of('(');
+        size_t lastPos = literal.find_last_of(')');
+        if (firstPos == std::string::npos || lastPos == std::string::npos || firstPos >= lastPos) {
+            returnLiteral = literal;
+        } else {
+            returnLiteral = literal.substr(0, firstPos + 1);
+            std::string tempStr = literal.substr(firstPos + 1, lastPos - firstPos - 1);
+            std::replace(tempStr.begin(), tempStr.end(), ',', ' ');
+            std::istringstream iss(tempStr);
+            std::vector<std::string> tokens((std::istream_iterator<std::string>(iss)),std::istream_iterator<std::string>());
+            for (int i = 0; i < tokens.size(); i++) {
+                if (i > 0) {
+                    returnLiteral += ",";
+                }
+                if (!tokens[i].empty()) {
+                    if (tokens[i].find_first_of('(') != std::string::npos) {
+                        returnLiteral += parseLiteral(tokens[i]);
+                    } else {
+                        if (tokens[i][0] <= 'Z' && tokens[i][0] >= 'A') {
+                            returnLiteral += tokens[i];
+                        } else {
+                            returnLiteral += tokens[i] + std::to_string(lineCounter);
+                        }
+                    }
+                }
+            }
+            returnLiteral += ")";
+        }
+        return returnLiteral;
+    }
+    
     std::string negation(std::string literal) {
         if (literal.empty()) return literal;
         if (literal[0] == '~') {
@@ -76,7 +111,7 @@ public:
         std::ifstream inputFile(fileName);
         if (inputFile) {
             std::string line;
-            int lineCounter = 0;
+            lineCounter = 0;
             //ignore all the whitespace
             while (std::getline(inputFile, line)) {
                 lineCounter++;
@@ -90,7 +125,7 @@ public:
                         // split a line into segments
                         std::istringstream iss(line);
                         while (std::getline(iss, temp, '|')) {
-                            segments.push_back(removeSpaces(const_cast<char*>(temp.c_str())));
+                            segments.push_back(parseLiteral(removeSpaces(const_cast<char*>(temp.c_str()))));
                         }
                         if (!segments.empty()) {
                             clauses.push_back(segments);
@@ -102,7 +137,7 @@ public:
                         std::string temp;
                         while (std::getline(iss, temp, '|')) {
                             std::vector<std::string> segments;
-                            segments.push_back(negation(removeSpaces(const_cast<char*>(temp.c_str()))));
+                            segments.push_back(negation(parseLiteral(removeSpaces(const_cast<char*>(temp.c_str())))));
                             if (!segments.empty()) {
                                 clauses.push_back(segments);
                             }
@@ -195,20 +230,33 @@ public:
         return false;
     }
     
-    std::string printPath(size_t n) {
+    std::string printPath1(size_t n) {
         std::string result = "";
         if (resolvePath.find(n) != resolvePath.end()) {
-            result = "[ " + printPath(resolvePath[n].first) + " , "
+            result = "[ " + printPath1(resolvePath[n].first) + " , "
             + std::to_string(n)
-            + " , " + printPath(resolvePath[n].second) + " ]";
+            + " , " + printPath1(resolvePath[n].second) + " ]";
         } else {
             result = std::to_string(n);
         }
         return result;
     }
     
+    std::string printPath2(size_t n) {
+        std::string result = "";
+        if (resolvePath.find(n) != resolvePath.end()) {
+            result = "[" + std::to_string(resolvePath[n].first) + ","
+            + std::to_string(resolvePath[n].second) + "] => ["
+            + std::to_string(n) + "]\n"
+            + printPath2(resolvePath[n].first)
+            + printPath2(resolvePath[n].second);
+        }
+        return result;
+    }
+    
     void printResolvePath() {
-        std::cout << printPath(static_cast<int>(clauses.size()) - 1) << std::endl;
+        std::cout << printPath1(static_cast<int>(clauses.size()) - 1) << std::endl << std::endl;
+        std::cout << printPath2(static_cast<int>(clauses.size()) - 1) << std::endl;
 //        for (size_t i = 0; i < clauses.size(); i++) {
 //            if (resolvePath.find(i) != resolvePath.end()) {
 //                std::cout << "[" << resolvePath[i].first << ","
