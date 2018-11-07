@@ -16,18 +16,16 @@ int main(int argc, const char * argv[]) {
     cout << "Please input a source file name: (input 'Q' to quit)\n";
     cin >> fileName;
     while (fileName != "q" && fileName != "Q") {
-        cout << endl;
         prover.clearData();
         if (prover.readCNFfile(dir + fileName)) {
-            prover.printAllClauses();
-//            if (prover.resolutionProve()) {
-//                prover.printAllClauses();
-//                cout << "\nThe query has been proved! \n\n";
-//                prover.printResolvePath();
-//            } else {
-//                prover.printAllClauses();
-//                cout << "\nThe query cannot be proved by the given KB. \n";
-//            }
+            if (prover.resolutionProve()) {
+                prover.printAllClauses();
+                cout << "\nThe query has been proved! \n\n";
+                prover.printResolvePath();
+            } else {
+                prover.printAllClauses();
+                cout << "\nThe query cannot be proved by the given KB. \n";
+            }
         }
         cout << "\nPlease input a source file name: (input 'Q' to quit)\n";
         cin >> fileName;

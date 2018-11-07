@@ -65,6 +65,15 @@ public:
         }
     }
     
+    bool isVariable(std::string str) {
+        if (str.empty()) return false;
+        if (str[0] >= 'a' && str[0] <= 'z') {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    
     std::string parseLiteral(std::string literal) {
         std::string returnLiteral = "";
         size_t firstPos = literal.find_first_of('(');
@@ -85,10 +94,10 @@ public:
                     if (tokens[i].find_first_of('(') != std::string::npos) {
                         returnLiteral += parseLiteral(tokens[i]);
                     } else {
-                        if (tokens[i][0] <= 'Z' && tokens[i][0] >= 'A') {
-                            returnLiteral += tokens[i];
-                        } else {
+                        if (isVariable(tokens[i])) {
                             returnLiteral += tokens[i] + std::to_string(lineCounter);
+                        } else {
+                            returnLiteral += tokens[i];
                         }
                     }
                 }
@@ -181,19 +190,104 @@ public:
         return false;
     }
     
+    bool unify(std::string l1, std::string l2) {
+        unification.clear();
+        std::string predicate1, predicate2;
+        size_t startPos1 = l1.find_first_of('(');
+        size_t startPos2 = l2.find_first_of('(');
+        size_t endPos1 = l1.find_last_of(')');
+        size_t endPos2 = l2.find_last_of(')');
+        if (startPos1 == std::string::npos && startPos2 == std::string::npos && l1 == negation(l2)) {
+            return true;
+        } else if (startPos1 == std::string::npos || startPos2 == std::string::npos) {
+            return false;
+        }
+        predicate1 = l1.substr(0, startPos1);
+        predicate2 = l2.substr(0, startPos2);
+        if (predicate1 == negation(predicate2)) {
+            if (endPos1 == std::string::npos || endPos1 == std::string::npos || startPos1 >= endPos1 || startPos2 >= endPos2) {
+                return false;
+            } else {
+                std::string tempStr1 = l1.substr(startPos1 + 1, endPos1 - startPos1 - 1);
+                std::replace(tempStr1.begin(), tempStr1.end(), ',', ' ');
+                std::istringstream iss1(tempStr1);
+                std::vector<std::string> tokens1((std::istream_iterator<std::string>(iss1)),std::istream_iterator<std::string>());
+                std::string tempStr2 = l2.substr(startPos2 + 1, endPos2 - startPos2 - 1);
+                std::replace(tempStr2.begin(), tempStr2.end(), ',', ' ');
+                std::istringstream iss2(tempStr2);
+                std::vector<std::string> tokens2((std::istream_iterator<std::string>(iss2)),std::istream_iterator<std::string>());
+                if (tokens1.size() != tokens2.size()) {
+                    return false;
+                }
+                for (int i = 0; i < tokens1.size(); i++) {
+                    if (isVariable(tokens1[i])) {
+                        if (!isVariable(tokens2[i])) {
+                            unification[tokens1[i]] = tokens2[i];
+                        }
+                    } else {
+                        if (isVariable(tokens2[i])) {
+                            unification[tokens2[i]] = tokens1[i];
+                        } else {
+                            if (tokens1[i] != tokens2[i]) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+    
+    std::string lift(std::string literal) {
+        std::string returnLiteral = "";
+        size_t firstPos = literal.find_first_of('(');
+        size_t lastPos = literal.find_last_of(')');
+        if (firstPos == std::string::npos || lastPos == std::string::npos || firstPos >= lastPos) {
+            returnLiteral = literal;
+        } else {
+            returnLiteral = literal.substr(0, firstPos + 1);
+            std::string tempStr = literal.substr(firstPos + 1, lastPos - firstPos - 1);
+            std::replace(tempStr.begin(), tempStr.end(), ',', ' ');
+            std::istringstream iss(tempStr);
+            std::vector<std::string> tokens((std::istream_iterator<std::string>(iss)),std::istream_iterator<std::string>());
+            for (int i = 0; i < tokens.size(); i++) {
+                if (i > 0) {
+                    returnLiteral += ",";
+                }
+                if (!tokens[i].empty()) {
+                    if (tokens[i].find_first_of('(') != std::string::npos) {
+                        returnLiteral += lift(tokens[i]);
+                    } else {
+                        if (isVariable(tokens[i]) && unification.find(tokens[i]) != unification.end()) {
+                            returnLiteral += unification[tokens[i]];
+                        } else {
+                            returnLiteral += tokens[i];
+                        }
+                    }
+                }
+            }
+            returnLiteral += ")";
+        }
+        return returnLiteral;
+    }
+    
     void resolve(size_t c1, size_t c2) {
         for (int i = 0; i < clauses[c1].size(); i++) {
             for (int j = 0; j < clauses[c2].size(); j++) {
-                if (clauses[c1][i] == negation(clauses[c2][j])) {
+                if (unify(clauses[c1][i], clauses[c2][j])) {
                     std::vector<std::string> newClause;
                     for (int k = 0; k < clauses[c1].size(); k++) {
-                        if (k != i && !isLiteralInClause(clauses[c1][k], newClause)) {
-                            newClause.push_back(clauses[c1][k]);
+                        std::string tempStr = lift(clauses[c1][k]);
+                        if (k != i && !isLiteralInClause(tempStr, newClause)) {
+                            newClause.push_back(tempStr);
                         }
                     }
                     for (int k = 0; k < clauses[c2].size(); k++) {
-                        if (k != j && !isLiteralInClause(clauses[c2][k], newClause)) {
-                            newClause.push_back(clauses[c2][k]);
+                        std::string tempStr = lift(clauses[c2][k]);
+                        if (k != j && !isLiteralInClause(tempStr, newClause)) {
+                            newClause.push_back(tempStr);
                         }
                     }
                     if (newClause.empty()) {
@@ -257,13 +351,6 @@ public:
     void printResolvePath() {
         std::cout << printPath1(static_cast<int>(clauses.size()) - 1) << std::endl << std::endl;
         std::cout << printPath2(static_cast<int>(clauses.size()) - 1) << std::endl;
-//        for (size_t i = 0; i < clauses.size(); i++) {
-//            if (resolvePath.find(i) != resolvePath.end()) {
-//                std::cout << "[" << resolvePath[i].first << ","
-//                << resolvePath[i].second << "] => ["
-//                << i << "]\n";
-//            }
-//        }
     }
 };
 
