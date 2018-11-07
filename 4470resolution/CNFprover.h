@@ -15,6 +15,8 @@
 #include <vector>
 #include <map>
 #include <utility>
+#include <iterator>
+#include <cctype>
 
 // a class using resolution method to prove CNF file of first order logic
 class CNFprover {
@@ -251,8 +253,13 @@ public:
                 }
                 for (int i = 0; i < tokens1.size(); i++) {
                     if (isVariable(tokens1[i])) {
-                        if (!isVariable(tokens2[i])) {
-                            // variable in the first token
+                        // variable in the first token
+                        if (isVariable(tokens2[i])) {
+                            // variable in the second token
+                            if (unification.find(tokens1[i]) == unification.end() && unification.find(tokens2[i]) == unification.end()) {
+                                unification[tokens1[i]] = tokens2[i];
+                            }
+                        } else {
                             unification[tokens1[i]] = tokens2[i];
                         }
                     } else {
